@@ -1,0 +1,36 @@
+# Tạo .gitignore
+@"
+# Arduino
+*.tmp
+*.bak
+arduino_secrets.h
+build/
+*.hex
+
+# Node.js
+node_modules/
+.env
+dist/
+npm-debug.log*
+
+# Android
+*.iml
+.gradle
+/local.properties
+/.idea/
+/build
+*.apk
+
+# General
+.DS_Store
+*.log
+certificates/
+*.key
+*.pem
+"@ | Out-File -FilePath .gitignore -Encoding UTF8
+
+# Add và push
+git add .
+git commit -m "Initial commit: Smart Home IoT Project"
+git branch -M main
+git push -u origin main

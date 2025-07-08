@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home WebSocket Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .connected {
+            background-color: #4CAF50;
+        }
+        .disconnected {
+            background-color: #F44336;
+        }
+        .warning {
+            background-color: #FFC107;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        button.active {
+            background-color: #2196F3;
+        }
+        button.emergency {
+            background-color: #F44336;
+        }
+        button.warning {
+            background-color: #FFC107;
+        }
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            margin: 10px 0;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 25px;
+        }
+        .confirmation-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #ddd;
+        }
+        .confirmation-pending {
+            border-left-color: #FFC107;
+            background-color: #fff3cd;
+        }
+        .confirmation-success {
+            border-left-color: #4CAF50;
+            background-color: #d4edda;
+        }
+        .confirmation-error {
+            border-left-color: #F44336;
+            background-color: #f8d7da;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+        .sensor-value {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+        }
+        .sensor-value h4 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .sensor-value p {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .safe {
+            background-color: #d4edda;
+        }
+        .warning-level {
+            background-color: #fff3cd;
+        }
+        .danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card full-width">
+            <div class="connection-status">
+                <div id="status-indicator" class="status-indicator disconnected"></div>
+                <span id="connection-status">Disconnected</span>
+            </div>
+            <button id="connect-btn">Connect</button>
+            <button id="disconnect-btn" disabled>Disconnect</button>
+            <button id="sync-btn" disabled>Request Sync</button>
+        </div>
+
+        <div class="card">
+            <h2>Device Control</h2>
+            <div class="control-panel">
+                <button id="led-toggle" disabled>LED: OFF</button>
+                <button id="buzzer-toggle" disabled>Buzzer: OFF</button>
+                <button id="auto-toggle" disabled>Auto: ON</button>
+                <button id="emergency-toggle" class="emergency" disabled>EMERGENCY: OFF</button>
+            </div>
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Ventilation (Motor A):</span>
+                    <span id="vent-value">0</span>
+                </div>
+                <input type="range" id="vent-slider" min="0" max="255" value="0" disabled>
+            </div>
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Fan (Motor B):</span>
+                    <span id="fan-value">0</span>
+                </div>
+                <input type="range" id="fan-slider" min="0" max="255" value="0" disabled>
+            </div>
+            <div id="confirmation-status" class="confirmation-status" style="display: none;">
+                Waiting for confirmation...
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Sensor Data</h2>
+            <div class="sensor-grid" id="sensor-grid">
+                <!-- Will be populated dynamically -->
+            </div>
+            <pre id="sensor-data-raw" style="margin-top: 15px; font-size: 10px;">Waiting for data...</pre>
+        </div>
+
+        <div class="card">
+            <h2>Device Status</h2>
+            <pre id="device-status">Waiting for data...</pre>
+        </div>
+
+        <div class="card full-width">
+            <h2>Messages Log</h2>
+            <button id="clear-log">Clear Log</button>
+            <pre id="message-log">WebSocket Client initialized.</pre>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const statusIndicator = document.getElementById('status-indicator');
+        const connectionStatus = document.getElementById('connection-status');
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const syncBtn = document.getElementById('sync-btn');
+        const ledToggle = document.getElementById('led-toggle');
+        const buzzerToggle = document.getElementById('buzzer-toggle');
+        const autoToggle = document.getElementById('auto-toggle');
+        const emergencyToggle = document.getElementById('emergency-toggle');
+        const ventSlider = document.getElementById('vent-slider');
+        const ventValue = document.getElementById('vent-value');
+        const fanSlider = document.getElementById('fan-slider');
+        const fanValue = document.getElementById('fan-value');
+        const sensorGrid = document.getElementById('sensor-grid');
+        const sensorDataRaw = document.getElementById('sensor-data-raw');
+        const deviceStatus = document.getElementById('device-status');
+        const messageLog = document.getElementById('message-log');
+        const clearLogBtn = document.getElementById('clear-log');
+        const confirmationStatus = document.getElementById('confirmation-status');
+
+        // WebSocket and State
+        let socket;
+        let deviceState = {
+            ledState: false,
+            buzzerState: false,
+            ventilationSpeed: 0,
+            fanSpeed: 0,
+            autoModeEnabled: true,
+            emergencyMode: false
+        };
+        
+        let sensorValues = {
+            temperature: null,
+            humidity: null,
+            co2Level: 0,
+            coLevel: 0,
+            lpgLevel: 0,
+            smokeLevel: 0,
+            nh3Level: 0,
+            lightLevel: 0,
+            flameDetected: false
+        };
+
+        let pendingCommands = new Map();
+        let commandTimeouts = new Map();
+
+        // Connect to WebSocket
+        function connectWebSocket() {
+            socket = new WebSocket('ws://localhost:3001');
+
+            socket.onopen = function(e) {
+                updateConnectionStatus(true);
+                logMessage('Connection established');
+                
+                // Request initial sync after connection
+                setTimeout(() => {
+                    requestSync();
+                }, 1000);
+            };
+
+            socket.onmessage = function(event) {
+                handleMessage(event.data);
+            };
+
+            socket.onclose = function(event) {
+                updateConnectionStatus(false);
+                if (event.wasClean) {
+                    logMessage(`Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                } else {
+                    logMessage('Connection died');
+                }
+            };
+
+            socket.onerror = function(error) {
+                logMessage(`Error: ${error.message}`);
+            };
+        }
+
+        // Handle incoming messages
+        function handleMessage(data) {
+            try {
+                const message = JSON.parse(data);
+                logMessage(`Received: ${JSON.stringify(message)}`);
+
+                // Handle different message types based on your backend WebSocket messages
+                if (message.type === 'sensor_data') {
+                    // Update sensor data display
+                    updateSensorData(message.data);
+                    sensorDataRaw.textContent = JSON.stringify(message.data, null, 2);
+                }
+                else if (message.type === 'device_status') {
+                    // Update device status display
+                    updateDeviceState(message.data);
+                    deviceStatus.textContent = JSON.stringify(message.data, null, 2);
+                }
+                else if (message.type === 'command_confirmation') {
+                    // Handle command confirmation
+                    handleCommandConfirmation(message);
+                }
+                else if (message.type === 'mqtt_connection') {
+                    // Update MQTT connection status
+                    logMessage(`MQTT Connection Status: ${message.connected ? 'Connected' : 'Disconnected'}`);
+                }
+                else if (message.type === 'error') {
+                    // Handle error messages
+                    logMessage(`Error: ${message.message}`);
+                }
+
+            } catch (e) {
+                logMessage(`Error parsing message: ${e.message}`);
+            }
+        }
+
+        // Handle command confirmation
+        function handleCommandConfirmation(message) {
+            const { requestId, data } = message;
+            
+            // Clear timeout for this command
+            if (commandTimeouts.has(requestId)) {
+                clearTimeout(commandTimeouts.get(requestId));
+                commandTimeouts.delete(requestId);
+            }
+            
+            // Get the pending command
+            const command = pendingCommands.get(requestId);
+            if (command) {
+                pendingCommands.delete(requestId);
+                
+                // Update UI based on success/failure
+                if (data.success) {
+                    confirmationStatus.className = 'confirmation-status confirmation-success';
+                    confirmationStatus.textContent = `Command ${command.device} executed successfully`;
+                    // Update device state
+                    if (command.updateState) {
+                        command.updateState();
+                    }
+                } else {
+                    confirmationStatus.className = 'confirmation-status confirmation-error';
+                    confirmationStatus.textContent = `Command ${command.device} failed: ${data.message}`;
+                }
+                
+                // Hide confirmation after 3 seconds
+                setTimeout(() => {
+                    confirmationStatus.style.display = 'none';
+                }, 3000);
+            }
+            
+            // If no more pending commands, update UI
+            if (pendingCommands.size === 0) {
+                enableControls(true);
+            }
+        }
+
+        // Update connection status display
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                statusIndicator.classList.remove('disconnected');
+                statusIndicator.classList.add('connected');
+                connectionStatus.textContent = 'Connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                syncBtn.disabled = false;
+                enableControls(true);
+            } else {
+                statusIndicator.classList.remove('connected');
+                statusIndicator.classList.add('disconnected');
+                connectionStatus.textContent = 'Disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                syncBtn.disabled = true;
+                enableControls(false);
+            }
+        }
+
+        // Enable/disable control elements
+        function enableControls(enabled) {
+            ledToggle.disabled = !enabled;
+            buzzerToggle.disabled = !enabled;
+            autoToggle.disabled = !enabled;
+            emergencyToggle.disabled = !enabled;
+            fanSlider.disabled = !enabled;
+            ventSlider.disabled = !enabled;
+        }
+
+        // Update device state from message
+        function updateDeviceState(data) {
+            // Map MQTT field names to our local state field names
+            const fieldMapping = {
+                'led': 'ledState',
+                'buzzer': 'buzzerState',
+                'motorA': 'ventilationSpeed',
+                'motorB': 'fanSpeed', 
+                'autoMode': 'autoModeEnabled',
+                'emergencyMode': 'emergencyMode'
+            };
+            
+            // Update our device state
+            for (const [mqttField, stateField] of Object.entries(fieldMapping)) {
+                if (data[mqttField] !== undefined) {
+                    deviceState[stateField] = data[mqttField];
+                }
+            }
+            
+            // Update UI to reflect current state
+            updateDeviceControls();
+        }
+
+        // Update sensor data display
+        function updateSensorData(data) {
+            // Map MQTT field names to our local sensor field names
+            const fieldMapping = {
+                'temperature': 'temperature',
+                'humidity': 'humidity',
+                'co2': 'co2Level',
+                'co': 'coLevel',
+                'lpg': 'lpgLevel',
+                'smoke': 'smokeLevel',
+                'nh3': 'nh3Level',
+                'light': 'lightLevel',
+                'flame': 'flameDetected'
+            };
+            
+            // Update our sensor values
+            for (const [mqttField, sensorField] of Object.entries(fieldMapping)) {
+                if (data[mqttField] !== undefined) {
+                    sensorValues[sensorField] = data[mqttField];
+                }
+            }
+            
+            // Update the sensor grid
+            updateSensorGrid();
+        }
+
+        // Update sensor grid display
+        function updateSensorGrid() {
+            sensorGrid.innerHTML = '';
+            
+            // Define thresholds for warning and danger levels
+            const thresholds = {
+                temperature: { warning: 28, danger: 35 },
+                humidity: { warning: 70, danger: 85 },
+                co2Level: { warning: 1000, danger: 2000 },
+                coLevel: { warning: 50, danger: 100 },
+                lpgLevel: { warning: 200, danger: 500 },
+                smokeLevel: { warning: 400, danger: 800 },
+                nh3Level: { warning: 5, danger: 10 },
+                lightLevel: { warning: 100, danger: 50 } // Lower is darker
+            };
+            
+            // Define display names and units
+            const displayInfo = {
+                temperature: { name: 'Temp', unit: '°C' },
+                humidity: { name: 'Humidity', unit: '%' },
+                co2Level: { name: 'CO₂', unit: 'ppm' },
+                coLevel: { name: 'CO', unit: 'ppm' },
+                lpgLevel: { name: 'LPG', unit: 'ppm' },
+                smokeLevel: { name: 'Smoke', unit: 'ppm' },
+                nh3Level: { name: 'NH₃', unit: 'ppm' },
+                lightLevel: { name: 'Light', unit: 'lux' },
+                flameDetected: { name: 'Flame', unit: '' }
+            };
+            
+            // Create sensor value displays
+            for (const [sensor, value] of Object.entries(sensorValues)) {
+                const sensorElement = document.createElement('div');
+                sensorElement.className = 'sensor-value';
+                
+                // Skip null values
+                if (value === null) continue;
+                
+                // Check if this is a boolean value (like flameDetected)
+                if (typeof value === 'boolean') {
+                    sensorElement.innerHTML = `
+                        <h4>${displayInfo[sensor].name}</h4>
+                        <p>${value ? 'YES' : 'NO'}</p>
+                    `;
+                    
+                    // Add danger class for detected flame
+                    if (sensor === 'flameDetected' && value) {
+                        sensorElement.classList.add('danger');
+                    } else {
+                        sensorElement.classList.add('safe');
+                    }
+                } 
+                else {
+                    sensorElement.innerHTML = `
+                        <h4>${displayInfo[sensor].name}</h4>
+                        <p>${value} ${displayInfo[sensor].unit}</p>
+                    `;
+                    
+                    // Add threshold-based classes
+                    if (thresholds[sensor]) {
+                        if (value >= thresholds[sensor].danger) {
+                            sensorElement.classList.add('danger');
+                        } else if (value >= thresholds[sensor].warning) {
+                            sensorElement.classList.add('warning-level');
+                        } else {
+                            sensorElement.classList.add('safe');
+                        }
+                    }
+                }
+                
+                sensorGrid.appendChild(sensorElement);
+            }
+        }
+
+        // Update device controls to reflect current state
+        function updateDeviceControls() {
+            ledToggle.textContent = `LED: ${deviceState.ledState ? 'ON' : 'OFF'}`;
+            ledToggle.className = deviceState.ledState ? 'active' : '';
+            
+            buzzerToggle.textContent = `Buzzer: ${deviceState.buzzerState ? 'ON' : 'OFF'}`;
+            buzzerToggle.className = deviceState.buzzerState ? 'active' : '';
+            
+            autoToggle.textContent = `Auto: ${deviceState.autoModeEnabled ? 'ON' : 'OFF'}`;
+            autoToggle.className = deviceState.autoModeEnabled ? 'active' : '';
+            
+            emergencyToggle.textContent = `EMERGENCY: ${deviceState.emergencyMode ? 'ON' : 'OFF'}`;
+            emergencyToggle.className = deviceState.emergencyMode ? 'emergency' : '';
+            
+            ventSlider.value = deviceState.ventilationSpeed;
+            ventValue.textContent = deviceState.ventilationSpeed;
+            
+            fanSlider.value = deviceState.fanSpeed;
+            fanValue.textContent = deviceState.fanSpeed;
+        }
+
+        // Send command to server
+        function sendCommand(device, state, requestId = null) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                logMessage('Cannot send command: WebSocket not connected');
+                return;
+            }
+            
+            // Generate a requestId if none provided
+            if (!requestId) {
+                requestId = Date.now().toString();
+            }
+            
+            // Prepare the message format expected by the backend
+            const message = {
+                type: 'device_command',
+                command: {
+                    device: device,
+                    state: state,
+                    requestId: requestId
+                }
+            };
+            
+            // Map device names to state properties for UI updates
+            const stateMapping = {
+                'led': () => { deviceState.ledState = state; },
+                'buzzer': () => { deviceState.buzzerState = state; },
+                'motorA': () => { deviceState.ventilationSpeed = state; },
+                'motorB': () => { deviceState.fanSpeed = state; },
+                'autoMode': () => { deviceState.autoModeEnabled = state; },
+                'emergency': () => { deviceState.emergencyMode = state; }
+            };
+            
+            // Store the pending command
+            pendingCommands.set(requestId, {
+                device,
+                state,
+                timestamp: Date.now(),
+                updateState: stateMapping[device]
+            });
+            
+            // Show confirmation status
+            confirmationStatus.className = 'confirmation-status confirmation-pending';
+            confirmationStatus.textContent = `Sending command to ${device}...`;
+            confirmationStatus.style.display = 'block';
+            
+            // Temporarily disable controls while waiting for confirmation
+            enableControls(false);
+            
+            // Set timeout for confirmation
+            const timeoutId = setTimeout(() => {
+                if (pendingCommands.has(requestId)) {
+                    confirmationStatus.className = 'confirmation-status confirmation-error';
+                    confirmationStatus.textContent = `Command to ${device} timed out`;
+                    pendingCommands.delete(requestId);
+                    
+                    // Re-enable controls if no more pending commands
+                    if (pendingCommands.size === 0) {
+                        enableControls(true);
+                    }
+                    
+                    // Hide after 3 seconds
+                    setTimeout(() => {
+                        confirmationStatus.style.display = 'none';
+                    }, 3000);
+                }
+            }, 5000);
+            
+            commandTimeouts.set(requestId, timeoutId);
+            
+            socket.send(JSON.stringify(message));
+            logMessage(`Sent command: ${device} = ${state}, requestId: ${requestId}`);
+        }
+
+        // Request device sync
+        function requestSync() {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                logMessage('Cannot request sync: WebSocket not connected');
+                return;
+            }
+            
+            const message = {
+                type: 'sync_request',
+                deviceId: 'default'
+            };
+            
+            socket.send(JSON.stringify(message));
+            logMessage('Requested device sync');
+        }
+
+        // Log message to the console
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            messageLog.textContent = `[${timestamp}] ${message}\n${messageLog.textContent}`;
+        }
+
+        // Event Listeners
+        connectBtn.addEventListener('click', connectWebSocket);
+        
+        disconnectBtn.addEventListener('click', () => {
+            if (socket) {
+                socket.close();
+            }
+        });
+        
+        syncBtn.addEventListener('click', requestSync);
+
+        ledToggle.addEventListener('click', () => {
+            sendCommand('led', !deviceState.ledState);
+        });
+
+        buzzerToggle.addEventListener('click', () => {
+            sendCommand('buzzer', !deviceState.buzzerState);
+        });
+
+        autoToggle.addEventListener('click', () => {
+            sendCommand('autoMode', !deviceState.autoModeEnabled);
+        });
+        
+        emergencyToggle.addEventListener('click', () => {
+            sendCommand('emergency', !deviceState.emergencyMode);
+        });
+
+        ventSlider.addEventListener('input', () => {
+            ventValue.textContent = ventSlider.value;
+        });
+
+        ventSlider.addEventListener('change', () => {
+            sendCommand('motorA', parseInt(ventSlider.value));
+        });
+        
+        fanSlider.addEventListener('input', () => {
+            fanValue.textContent = fanSlider.value;
+        });
+
+        fanSlider.addEventListener('change', () => {
+            sendCommand('motorB', parseInt(fanSlider.value));
+        });
+
+        clearLogBtn.addEventListener('click', () => {
+            messageLog.textContent = 'Log cleared.';
+        });
+
+        // Initialize
+        updateConnectionStatus(false);
+    </script>
+</body>
+</html>

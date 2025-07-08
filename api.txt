@@ -1,0 +1,766 @@
+## 1. Authentication API
+
+### 1.1 Register User
+- **URL**: `POST /api/auth/register`
+- **Auth Required**: No
+- **Request Body**:
+  ```json
+  {
+    "username": "string",
+    "email": "string",
+    "password": "string"
+  }
+  ```
+- **Response**: 
+  ```json
+  {
+    "message": "User registered successfully. Please wait for account approval."
+  }
+  ```
+- **Status Codes**:
+  - 201: Created
+  - 400: Bad Request (username/email exists, invalid format)
+  - 500: Server Error
+
+### 1.2 User Login
+- **URL**: `POST /api/auth/login`
+- **Auth Required**: No
+- **Request Body**:
+  ```json
+  {
+    "username": "string",
+    "password": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "firebaseToken": "string",
+    "backendToken": "string",
+    "role": "user|admin",
+    "userId": "string",
+    "username": "string",
+    "email": "string"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized (invalid credentials)
+  - 403: Forbidden (account not approved)
+  - 500: Server Error
+
+### 1.3 Exchange Firebase Token
+- **URL**: `POST /api/auth/exchange-token`
+- **Auth Required**: No
+- **Request Body**:
+  ```json
+  {
+    "firebaseToken": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "token": "string",
+    "role": "user|admin",
+    "userId": "string",
+    "username": "string",
+    "email": "string"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized (invalid token)
+  - 403: Forbidden (account not approved)
+  - 404: Not Found (user not found)
+  - 500: Server Error
+
+### 1.4 Forgot Password
+- **URL**: `POST /api/auth/forgot-password`
+- **Auth Required**: No
+- **Request Body**:
+  ```json
+  {
+    "email": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "message": "If your email is registered, you will receive a password reset link"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+
+## 2. User Management API
+
+### 2.1 Get All Users (Admin)
+- **URL**: `GET /api/users`
+- **Auth Required**: Yes (Admin)
+- **Response**:
+  ```json
+  [
+    {
+      "_id": "string",
+      "username": "string",
+      "email": "string",
+      "role": "user|admin",
+      "status": "pending|approved",
+      "firebaseUid": "string"
+    }
+  ]
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 500: Server Error
+
+### 2.2 Approve User (Admin)
+- **URL**: `POST /api/users/approve`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "id": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "message": "User approved successfully",
+    "user": {
+      "_id": "string",
+      "username": "string",
+      "email": "string",
+      "role": "user|admin",
+      "status": "approved",
+      "firebaseUid": "string"
+    }
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request (already approved)
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 404: Not Found
+  - 500: Server Error
+
+### 2.3 Reset User Password (Admin)
+- **URL**: `POST /api/users/reset-password`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "userId": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "message": "Password reset successfully",
+    "tempPassword": "string"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 404: Not Found
+  - 500: Server Error
+
+### 2.4 Change Password (User)
+- **URL**: `POST /api/users/change-password`
+- **Auth Required**: Yes
+- **Request Body**:
+  ```json
+  {
+    "oldPassword": "string",
+    "newPassword": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "message": "Password changed successfully"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request (invalid old password)
+  - 401: Unauthorized
+  - 404: Not Found
+  - 500: Server Error
+
+### 2.5 Delete Account (User)
+- **URL**: `POST /api/users/delete-account`
+- **Auth Required**: Yes
+- **Response**:
+  ```json
+  {
+    "message": "User account deleted successfully"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized
+  - 404: Not Found
+  - 500: Server Error
+
+### 2.6 Permanently Delete User (Admin)
+- **URL**: `POST /api/users/delete`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "id": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "message": "User permanently deleted successfully"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 404: Not Found
+  - 500: Server Error
+
+## 3. Device Control API
+
+### 3.1 Get Device States
+- **URL**: `GET /api/devices/states`
+- **Auth Required**: Yes
+- **Query Parameters**:
+  - `deviceId` (optional): Device identifier, defaults to "default"
+- **Response**:
+  ```json
+  {
+    "ledState": false,
+    "buzzerState": false,
+    "ventilationSpeed": 0,
+    "fanSpeed": 255,
+    "autoModeEnabled": true,
+    "emergencyMode": false
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized
+  - 500: Server Error
+
+### 3.2 Control Light
+- **URL**: `POST /api/devices/light`
+- **Auth Required**: Yes
+- **Request Body**:
+  ```json
+  {
+    "state": true,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Light updated",
+    "previousState": false,
+    "newState": true
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 500: Server Error
+
+### 3.3 Control Fan
+- **URL**: `POST /api/devices/fan`
+- **Auth Required**: Yes
+- **Request Body**:
+  ```json
+  {
+    "speed": 150,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Fan speed updated",
+    "previousState": 0,
+    "newState": 150
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 500: Server Error
+
+### 3.4 Control Ventilation
+- **URL**: `POST /api/devices/ventilation`
+- **Auth Required**: Yes
+- **Request Body**:
+  ```json
+  {
+    "speed": 200,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Ventilation speed updated",
+    "previousState": 0,
+    "newState": 200
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 500: Server Error
+
+### 3.5 Control Buzzer
+- **URL**: `POST /api/devices/buzzer`
+- **Auth Required**: Yes
+- **Request Body**:
+  ```json
+  {
+    "state": true,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Buzzer updated",
+    "previousState": false,
+    "newState": true
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 500: Server Error
+
+### 3.6 Control Auto Mode
+- **URL**: `POST /api/devices/autoMode`
+- **Auth Required**: Yes
+- **Request Body**:
+  ```json
+  {
+    "state": true,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Auto mode updated",
+    "previousState": false,
+    "newState": true
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 500: Server Error
+
+### 3.7 Reset Manual Controls
+- **URL**: `POST /api/devices/resetManual`
+- **Auth Required**: Yes
+- **Request Body**:
+  ```json
+  {
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Manual controls reset successfully"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 500: Server Error
+
+### 3.8 Update Multiple Properties (Admin)
+- **URL**: `POST /api/devices/updateAll`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "led": true,
+    "buzzer": false,
+    "motorA": 200,
+    "motorB": 150,
+    "autoMode": true,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Multiple properties updated successfully",
+    "updates": {
+      "led": true,
+      "buzzer": false,
+      "motorA": 200,
+      "motorB": 150,
+      "autoMode": true
+    }
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 500: Server Error
+
+### 3.9 Force Device Sync (Admin)
+- **URL**: `POST /api/devices/sync`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Sync request sent to device"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 500: Server Error
+
+## 4. Thresholds API
+
+### 4.1 Get Thresholds
+- **URL**: `GET /api/devices/thresholds`
+- **Auth Required**: Yes
+- **Query Parameters**:
+  - `deviceId` (optional): Device identifier, defaults to "default"
+- **Response**:
+  ```json
+  {
+    "_id": "string",
+    "deviceId": "default",
+    "temperature": 28,
+    "humidity": 65,
+    "co2": 800,
+    "light": 400,
+    "co": 50,
+    "lpg": 500,
+    "smoke": 100,
+    "nh3": 10
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized
+  - 500: Server Error
+
+### 4.2 Update Thresholds (Admin)
+- **URL**: `POST /api/devices/thresholds`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "temperature": 28,
+    "humidity": 65,
+    "co2": 800,
+    "light": 400,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Thresholds updated successfully",
+    "thresholds": {
+      "_id": "string",
+      "deviceId": "default",
+      "temperature": 28,
+      "humidity": 65,
+      "co2": 800,
+      "light": 400,
+      "co": 50,
+      "lpg": 500,
+      "smoke": 100,
+      "nh3": 10
+    }
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 500: Server Error
+
+## 5. Emergency Management API
+
+### 5.1 Get Emergency Status
+- **URL**: `GET /api/devices/emergency`
+- **Auth Required**: Yes (Admin)
+- **Query Parameters**:
+  - `deviceId` (optional): Device identifier, defaults to "default"
+- **Response**:
+  ```json
+  {
+    "deviceId": "default",
+    "emergencyMode": true,
+    "devicesInEmergency": [
+      {
+        "deviceId": "default",
+        "name": "Living Room",
+        "location": "Home",
+        "lastUpdated": "2025-05-17T12:34:56Z"
+      }
+    ],
+    "note": "Emergency mode is automatically managed by the device based on sensor readings"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 500: Server Error
+
+### 5.2 Try to Activate Emergency Mode (Admin)
+- **URL**: `POST /api/devices/emergency`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "state": true,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": false,
+    "message": "Emergency mode is managed by the device itself based on sensor readings. The system will automatically enter emergency mode when dangerous conditions are detected.",
+    "canControlBuzzer": true
+  }
+  ```
+- **Status Codes**:
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 500: Server Error
+
+### 5.3 Try to Clear Emergency Mode (Admin)
+- **URL**: `POST /api/devices/emergency`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "state": false,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Emergency mode reset request sent. Will only clear if dangerous conditions are no longer present."
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 500: Server Error
+
+### 5.4 Control Emergency Buzzer (Admin)
+- **URL**: `POST /api/devices/emergency/buzzer`
+- **Auth Required**: Yes (Admin)
+- **Request Body**:
+  ```json
+  {
+    "state": false,
+    "deviceId": "default"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Emergency buzzer disabled"
+  }
+  ```
+- **Status Codes**:
+  - 200: OK
+  - 400: Bad Request (only works in emergency mode)
+  - 401: Unauthorized
+  - 403: Forbidden (non-admin)
+  - 500: Server Error
+
+## 6. MQTT Protocol Documentation
+
+### 6.1 Control Commands
+- **Topic**: `home/control`
+- **Direction**: Server → Device
+- **Format**:
+  ```json
+  {
+    "device": "led|motorA|motorB|buzzer|autoMode",
+    "state": true|false|0-255,
+    "requestId": "string"
+  }
+  ```
+
+### 6.2 Command Confirmations
+- **Topic**: `home/confirm/{requestId}`
+- **Direction**: Device → Server
+- **Format**:
+  ```json
+  {
+    "success": true|false,
+    "message": "string",
+    "led": true|false,
+    "buzzer": true|false,
+    "motorA": 0-255,
+    "motorB": 0-255,
+    "autoMode": true|false,
+    "emergencyMode": true|false,
+    "manualLed": true|false,
+    "manualMotorA": true|false,
+    "manualMotorB": true|false,
+    "manualBuzzer": true|false
+  }
+  ```
+
+### 6.3 Sensor Data
+- **Topic**: `home/sensors`
+- **Direction**: Device → Server
+- **Format**:
+  ```json
+  {
+    "temperature": 25.5,
+    "humidity": 60.2,
+    "co2": 650,
+    "light": 320,
+    "flame": false,
+    "lpg": 10.5,
+    "co": 5.2,
+    "smoke": 15.3,
+    "nh3": 3.1,
+    "deviceId": "default",
+    "timestamp": "2025-05-17T12:34:56Z"
+  }
+  ```
+
+### 6.4 Device Status
+- **Topic**: `home/device_status`
+- **Direction**: Device → Server
+- **Format**:
+  ```json
+  {
+    "led": true|false,
+    "buzzer": true|false,
+    "motorA": 0-255,
+    "motorB": 0-255,
+    "autoMode": true|false,
+    "emergencyMode": true|false,
+    "deviceId": "default",
+    "manualLed": true|false,
+    "manualMotorA": true|false,
+    "manualMotorB": true|false,
+    "manualBuzzer": true|false
+  }
+  ```
+
+### 6.5 Emergency Notifications
+- **Topic**: `home/emergency`
+- **Direction**: Device → Server
+- **Format**: `"true"|"false"`
+
+### 6.6 Threshold Updates
+- **Topic**: `home/thresholds`
+- **Direction**: Server → Device
+- **Format**:
+  ```json
+  {
+    "temperature": 28,
+    "humidity": 65,
+    "co2": 800,
+    "light": 400,
+    "co": 50,
+    "lpg": 500,
+    "smoke": 100,
+    "nh3": 10,
+    "requestId": "string"
+  }
+  ```
+
+### 6.7 Sync Requests
+- **Topic**: `home/sync_request`
+- **Direction**: Server → Device
+- **Format**:
+  ```json
+  {
+    "requestId": "string"
+  }
+  ```
+
+### 6.8 Sync Responses
+- **Topic**: `home/sync_response`
+- **Direction**: Device → Server
+- **Format**:
+  ```json
+  {
+    "requestId": "string",
+    "led": true|false,
+    "buzzer": true|false,
+    "motorA": 0-255,
+    "motorB": 0-255,
+    "autoMode": true|false,
+    "emergencyMode": true|false,
+    "manualLed": true|false,
+    "manualMotorA": true|false,
+    "manualMotorB": true|false,
+    "manualBuzzer": true|false,
+    "deviceId": "default"
+  }
+  ```
+
+### 6.9 Reset Manual Controls
+- **Topic**: `home/reset_manual`
+- **Direction**: Server → Device
+- **Format**:
+  ```json
+  {
+    "requestId": "string"
+  }
+  ```

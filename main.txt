@@ -1,0 +1,238 @@
+# Smart Home Bot - Project Knowledge Base
+
+## 1. Project Overview
+
+Smart Home Bot is a comprehensive IoT management system with the following features:
+- User authentication and management (Firebase + JWT)
+- IoT device control (LED lights, fans, ventilation motors)
+- Sensor data collection (temperature, humidity, CO2, smoke, etc.)
+- Automatic mode based on customizable thresholds
+- Emergency mode triggered by dangerous conditions detection
+- Real-time monitoring via WebSocket
+
+## 2. Project Structure
+
+```
+smart-home-backend/
+├── config/                 # Connection configurations
+│   ├── database.mjs        # MongoDB connection
+│   ├── firebase.mjs        # Firebase connection
+│   └── mqttConfig.js       # MQTT configuration
+├── controllers/            # Business logic
+│   ├── authController.mjs  # User authentication
+│   ├── cleanupOldData.mjs  # Data cleanup
+│   ├── deviceController.mjs # Device control
+│   ├── mqttController.mjs  # MQTT data processing
+│   └── userController.mjs  # User management
+├── middleware/             # Middleware
+│   ├── adminMiddleware.mjs # Admin authorization
+│   └── authMiddleware.mjs  # User authentication
+├── models/                 # Data models
+│   ├── Device.mjs          # Device model
+│   ├── sensor.mjs          # Sensor model
+│   ├── Threshold.mjs       # Threshold model
+│   └── User.mjs            # User model
+├── routes/                 # API routes
+│   ├── authRoutes.mjs      # Auth routes
+│   ├── deviceRoutes.mjs    # Device routes
+│   ├── index.mjs           # Main router
+│   ├── mqttRoutes.mjs      # MQTT routes
+│   ├── sensorRoutes.mjs    # Sensor routes
+│   └── userRoutes.mjs      # User routes
+├── services/               # Services
+│   ├── mqttService.mjs     # MQTT service
+│   └── webSocketService.mjs # WebSocket service
+├── utils/                  # Utilities
+│   └── logger.mjs          # Logging
+├── .env                    # Environment variables
+├── server.mjs              # Entry point
+└── package.json            # npm configuration
+```
+
+## 3. Key Components and Relationships
+
+### Backend (Node.js/Express):
+- **Authentication**: Firebase + JWT token
+- **Device State**: Global `deviceState` variable + MongoDB storage
+- **MQTT Communication**: Sends control commands and receives sensor data
+- **WebSocket**: Provides real-time updates to frontend
+
+### Database (MongoDB):
+- **Users**: User management, role-based access
+- **Devices**: Stores device states
+- **Sensors**: Stores sensor data
+- **Thresholds**: Stores alert thresholds
+
+### Communication:
+- **MQTT**: Communication with Arduino
+- **WebSocket**: Real-time updates to frontend
+- **RESTful API**: Frontend communication
+
+## 4. Main Workflows
+
+### System Startup:
+```
+server.mjs → connectToDatabase() → setupWebSocket() → setupMQTT() → Listen on routes
+```
+
+### Device Control:
+```
+Frontend → API → deviceController → updatePropertyValue() → MQTT → Arduino
+     ↑                   ↓                                    ↓
+     └────── WebSocket ←┴─── updateDeviceState() ←─── No confirmation
+```
+
+### Sensor Data Collection:
+```
+Arduino → MQTT → mqttService → WebSocket → Frontend
+                     ↓
+                mqttController
+                     ↓
+                Store in Database
+                     ↓
+               processAutoMode()
+```
+
+### Auto & Emergency Modes:
+```
+Sensor data → checkEmergencyCondition() → true → handleEmergency()
+                     ↓                                  ↓
+                    false                       Activate emergency devices
+                     ↓
+              deviceState.autoMode
+                     ↓
+               processAutoMode()
+                     ↓
+            Control devices based on thresholds
+```
+
+## 5. Identified Issues
+
+### 1. Device State Management:
+- Uses global `deviceState` variable
+- No state synchronization when server restarts
+- No mechanism to verify actual device state
+
+### 2. Command Confirmation Lacking:
+- Sends commands via MQTT but no confirmation from device
+- Assumes command success upon sending
+- Frontend/backend state may differ from actual device state
+
+### 3. Manual/Auto Mode Conflicts:
+- `manualControl` flag only stored in memory
+- No clear switching mechanism
+- State lost on server restart
+
+### 4. MQTT Connection Handling Suboptimal:
+- Lacks retry mechanism for important commands
+- Only logs errors without recovery
+- No connection status notifications to frontend
+
+### 5. Simple Throttling:
+- Uses throttle instead of queue
+- May lose important commands when many are sent quickly
+- No command prioritization mechanism
+
+## 6. Proposed Solutions
+
+### 1. Device State Synchronization:
+- Add `initDeviceState()` to restore from database
+- Implement Request-Response mechanism to sync with devices
+- Use WebSocket for real-time state updates
+
+### 2. Command Confirmation Mechanism:
+- Implement `updatePropertyValueWithConfirmation()`
+- Add `home/confirm/{requestId}` topic for confirmations
+- Handle timeouts and retries when confirmation absent
+
+### 3. Manual/Auto Mode Management:
+- Create `ManualControl` model in database
+- Update API endpoints to support mode switching
+- Restore state on startup
+
+### 4. Improved MQTT Handling:
+- Add reconnect mechanism with limited retries
+- Store failed commands for retry after reconnection
+- Broadcast connection status via WebSocket
+
+### 5. Command Queue Implementation:
+- Replace throttle with priority queue
+- Ensure all commands are processed in order
+- Support high-priority commands in emergency situations
+
+## 7. Implementation Plan
+
+### Phase 1: Basic State Synchronization
+- Implement `initDeviceState` to restore state on startup
+- Add device synchronization mechanism
+- Update Arduino code to support sync requests
+
+### Phase 2: Command Confirmation
+- Implement `updatePropertyValueWithConfirmation`
+- Update MQTT handlers to process confirmations
+- Modify Arduino code to send command confirmations
+
+### Phase 3: Manual/Auto Mode Management
+- Create ManualControl model in database
+- Update logic to store manual control state
+- Update API endpoints
+
+### Phase 4: MQTT Error Handling
+- Implement retry mechanism
+- Update status notifications to frontend
+- Handle connection loss
+
+### Phase 5: Command Queue
+- Implement CommandQueue for priority-based handling
+- Update API endpoints to use queue
+- Support emergency prioritization
+
+## 8. Device Command API Endpoints
+
+- `POST /api/devices/light` - Control LED light
+- `POST /api/devices/fan` - Control fan (motorB)
+- `POST /api/devices/ventilation` - Control ventilation (motorA)
+- `POST /api/devices/buzzer` - Control buzzer
+- `POST /api/devices/autoMode` - Enable/disable auto mode
+- `POST /api/devices/emergency` - Enable/disable emergency mode
+- `GET /api/devices/states` - Get all device states
+- `GET /api/devices/thresholds` - Get thresholds
+- `POST /api/devices/thresholds` - Update thresholds
+- `POST /api/devices/resetManualControl` - Reset manual controls
+- `POST /api/devices/updateAll` - Update all devices at once
+
+## 9. Important Resources
+
+### Environment Variables (.env):
+- MongoDB URI, JWT Secret, MQTT Broker URL
+- Firebase configuration 
+- Arduino device information
+- Default threshold values
+
+### Key Dependencies:
+- Express (framework)
+- Mongoose (MongoDB)
+- MQTT.js (MQTT client)
+- Firebase Admin (authentication)
+- WebSocket (real-time updates)
+- node-cron (scheduled jobs)
+
+## 10. Arduino Integration
+
+The Arduino device connects to the MQTT broker and:
+- Subscribes to `home/control` to receive commands
+- Publishes to `home/sensors` to send sensor data
+- Should be updated to support:
+  - Publishing to `home/confirm/{requestId}` for command confirmations
+  - Responding to `home/sync_request` with current device states
+  - Managing emergency mode locally when connection lost
+
+## 11. Current Limitations to Address
+
+- No command confirmation from Arduino devices
+- No backup control when MQTT connection fails
+- Manual control flags lost on server restart
+- No proper device synchronization on startup
+- Throttling may drop important commands
+- No way to prioritize emergency commands
+- No visual feedback about device connection status

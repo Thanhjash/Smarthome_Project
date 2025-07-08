@@ -1,0 +1,100 @@
+# Smart Home System: Status Review & Next Steps
+
+## Current Status
+- Backend server connects to MongoDB and MQTT broker successfully
+- API routes structure created for devices, sensors, thresholds, and authentication
+- Firebase authentication configured with new project credentials
+- Initial Postman collection setup started
+- Arduino integration with MQTT broker functional
+
+## Next Steps: Account Management
+
+1. **Firebase Authentication Integration**
+   - Verify Firebase Admin SDK connection with updated credentials
+   - Test user creation and authentication flow
+   - Implement proper error handling for Firebase operations
+
+2. **User Authentication API**
+   - Complete/test `/api/auth/register` endpoint
+   - Complete/test `/api/auth/login` endpoint
+   - Implement token validation and refresh mechanisms
+
+3. **User Management Functions**
+   - Implement admin approval workflow for new users
+   - Complete password reset functionality
+   - Implement user profile management
+
+## API Testing Plan
+
+1. **Authentication Testing**
+   - Create test users (admin and regular)
+   - Verify token generation and validation
+   - Test authorization middleware
+
+2. **Device Control Testing**
+   - Test all device endpoints with proper authentication
+   - Verify MQTT messages are received by Arduino
+   - Test manual/auto mode transitions
+
+3. **Sensor Data & Thresholds**
+   - Test sensor data retrieval endpoints
+   - Test threshold management
+   - Verify auto mode behaviors with different thresholds
+
+## Detailed API Documentation
+
+### Authentication API
+- `POST /api/auth/register`
+  - Request: `{ "username": "string", "email": "string", "password": "string" }`
+  - Response: `{ "message": "User registered successfully" }`
+  - Status: 201 Created, 400 Bad Request
+
+- `POST /api/auth/login`
+  - Request: `{ "username": "string", "password": "string" }`
+  - Response: `{ "firebaseToken": "string", "backendToken": "string", "role": "string" }`
+  - Status: 200 OK, 401 Unauthorized
+
+### Device Control API
+- `GET /api/devices/states`
+  - Response: `{ "ledState": boolean, "buzzerState": boolean, "ventilationSpeed": number, "fanSpeed": number, "autoModeEnabled": boolean, "emergencyMode": boolean }`
+  - Status: 200 OK, 500 Server Error
+
+- `POST /api/devices/light`
+  - Request: `{ "state": boolean, "deviceId": "string" }`
+  - Response: `{ "success": boolean, "message": "string" }`
+  - Status: 200 OK, 400 Bad Request
+
+- `POST /api/devices/fan`
+  - Request: `{ "speed": number(0-255), "deviceId": "string" }`
+  - Response: `{ "success": boolean, "message": "string" }`
+
+- `POST /api/devices/ventilation`
+  - Request: `{ "speed": number(0-255), "deviceId": "string" }`
+  - Response: `{ "success": boolean, "message": "string" }`
+
+- `POST /api/devices/autoMode`
+  - Request: `{ "state": boolean, "deviceId": "string" }`
+  - Response: `{ "success": boolean, "message": "string" }`
+
+### Arduino/MQTT Protocol
+- Topic: `home/control`
+  - Used to send commands to Arduino
+  - Format: `{ "device": "led|motorA|motorB|buzzer|autoMode", "state": boolean|number, "requestId": "string" }`
+
+- Topic: `home/confirm/{requestId}`
+  - Confirmation from Arduino after executing commands
+  - Format: `{ "success": boolean, "message": "string", "led": boolean, "buzzer": boolean, "motorA": number, "motorB": number, "autoMode": boolean, "emergencyMode": boolean }`
+
+- Topic: `home/sensors`
+  - Sensor data from Arduino
+  - Format: `{ "temperature": number, "humidity": number, "co2": number, "light": number, "flame": boolean, "lpg": number, "co": number, "smoke": number, "nh3": number, "deviceId": "string" }`
+
+- Topic: `home/device_status`
+  - Current device state
+  - Format: `{ "led": boolean, "buzzer": boolean, "motorA": number, "motorB": number, "autoMode": boolean, "emergencyMode": boolean, "deviceId": "string" }`
+
+- Topic: `home/emergency`
+  - Emergency state notification
+  - Format: `"true"|"false"`
+
+For the next step, I'll need to review your account management code files to help complete that functionality. Please share your directory structure to identify which files need attention.
