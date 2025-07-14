@@ -2,80 +2,102 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, logout } from '@/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 import { Layout } from '@/components/Layout';
-import { Heading, Box, Card, CardHeader, CardBody, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react';
+import { 
+  Heading, 
+  Box, 
+  Card, 
+  CardBody, 
+  SimpleGrid, 
+  Text, 
+  Spinner, 
+  Center,
+  Button,
+  VStack
+} from '@chakra-ui/react';
+import { getCurrentUser, isAuthenticated } from '@/utils/auth';
 
 const UserDashboard: React.FC = () => {
-  const [users, setUsers] = useState<{ username: string; email: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState<any>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.push('/login');
-      } else {
-        localStorage.setItem('user', JSON.stringify(user));
-        fetchUsers();
-      }
-    });
+    // Check authentication
+    if (!isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
 
-    return () => unsubscribe();
+    const user = getCurrentUser();
+    setUserInfo(user);
+    setLoading(false);
   }, [router]);
 
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('/api/users');
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      localStorage.removeItem('user');
-      router.push('/login');
-    } catch (error) {
-      console.error('Failed to logout:', error);
-    }
-  };
+  if (loading) {
+    return (
+      <Center h="100vh">
+        <Spinner size="xl" />
+      </Center>
+    );
+  }
 
   return (
     <Layout isAdmin={false}>
-      <Card bg='white' color='black' boxShadow="2xl">
-        <CardBody>
-          <Heading>User List</Heading>
-          <br></br>
-          <Box overflowX="auto">
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Username</Th>
-                  <Th>Email</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {users.map((user) => (
-                  <Tr key={user.email}>
-                    <Td>{user.username}</Td>
-                    <Td>{user.email}</Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
-        </CardBody>
-      </Card>
+      <VStack spacing={6} align="stretch">
+        <Card bg='white' color='black' boxShadow="2xl">
+          <CardBody>
+            <Heading size="lg">User Dashboard</Heading>
+            <Text fontSize="md" color="gray.600" mt={2}>
+              Welcome back, {userInfo?.username}!
+            </Text>
+          </CardBody>
+        </Card>
+
+        <SimpleGrid spacing={4} templateColumns='repeat(auto-fill, minmax(300px, 1fr))'>
+          <Card bg='white' color='black' boxShadow="lg" _hover={{ boxShadow: "xl" }}>
+            <CardBody>
+              <Heading size="md" mb={3}>Quick Actions</Heading>
+              <VStack spacing={3}>
+                <Button 
+                  colorScheme="teal" 
+                  w="full"
+                  onClick={() => router.push('/dashboard/sensor')}
+                >
+                  View Sensors
+                </Button>
+                <Button 
+                  colorScheme="blue" 
+                  variant="outline"
+                  w="full"
+                  onClick={() => router.push('/dashboard/history')}
+                >
+                  View History
+                </Button>
+                <Button 
+                  colorScheme="purple" 
+                  variant="outline"
+                  w="full"
+                  onClick={() => router.push('/profile')}
+                >
+                  Edit Profile
+                </Button>
+              </VStack>
+            </CardBody>
+          </Card>
+
+          <Card bg='white' color='black' boxShadow="lg">
+            <CardBody>
+              <Heading size="md" mb={3}>Account Info</Heading>
+              <VStack align="start" spacing={2}>
+                <Text><strong>Username:</strong> {userInfo?.username}</Text>
+                <Text><strong>Email:</strong> {userInfo?.email}</Text>
+                <Text><strong>Role:</strong> {userInfo?.role}</Text>
+              </VStack>
+            </CardBody>
+          </Card>
+        </SimpleGrid>
+      </VStack>
     </Layout>
   );
 };

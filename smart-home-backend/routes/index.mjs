@@ -5,6 +5,7 @@ import deviceRoutes from './deviceRoutes.mjs';
 import sensorRoutes from './sensorRoutes.mjs';
 import thresholdRoutes from './thresholdRoutes.mjs';
 import userRoutes from './userRoutes.mjs';
+import cameraRoutes from './cameraRoutes.mjs';
 
 const router = express.Router();
 
@@ -20,6 +21,7 @@ router.use('/devices', deviceRoutes);
 router.use('/sensors', sensorRoutes);
 router.use('/thresholds', thresholdRoutes);
 router.use('/users', userRoutes);
+router.use('/camera', cameraRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

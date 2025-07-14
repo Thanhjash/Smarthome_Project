@@ -1,21 +1,39 @@
-import React from 'react';
-import { Navbar } from '@/components/Navbar';
-import { Sidebar } from '@/components/Sidebar';
+"use client";
 
-const UserDashboard: React.FC = () => {
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getCurrentUser, isAuthenticated, isAdmin } from '@/utils/auth';
+import { Center, Spinner } from '@chakra-ui/react';
+
+const DashboardPage: React.FC = () => {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check authentication
+    if (!isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    // Redirect based on role
+    const userInfo = getCurrentUser();
+    if (userInfo) {
+      if (isAdmin()) {
+        router.push('/dashboard/admin');
+      } else {
+        router.push('/dashboard/user');
+      }
+    } else {
+      router.push('/login');
+    }
+  }, [router]);
+
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-      <Sidebar isAdmin={false} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900">
-          <div className="container mx-auto px-6 py-8">
-            <h1 className="text-3xl font-semibold text-gray-800 dark:text-white mb-6">User Dashboard</h1>
-            <p>Welcome to the user dashboard!</p>
-          </div>
-        </main>
-      </div>
-    </div>
+    <Center h="100vh">
+      <Spinner size="xl" />
+    </Center>
   );
 };
 
-export default UserDashboard;
+export default DashboardPage;

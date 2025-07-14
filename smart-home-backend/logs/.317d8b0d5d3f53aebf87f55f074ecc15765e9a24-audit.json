@@ -6,9 +6,19 @@
     "auditLog": "D:\\3.Project\\smarthome\\smart-home-backend\\logs\\.317d8b0d5d3f53aebf87f55f074ecc15765e9a24-audit.json",
     "files": [
         {
-            "date": 1747469500871,
-            "name": "D:\\3.Project\\smarthome\\smart-home-backend\\logs\\combined-2025-05-17.log",
-            "hash": "1f8cd19d89a5ddd34388af9c4bfea1439441b73c57446cceb0b0efa68ace05fb"
+            "date": 1752344101947,
+            "name": "D:\\3.Project\\smarthome\\smart-home-backend\\logs\\combined-2025-07-13.log",
+            "hash": "d04804191a4c64b3c8249399576b2683549c941379f7f6a041407b41a96af5e0"
+        },
+        {
+            "date": 1752461494311,
+            "name": "D:\\3.Project\\smarthome\\smart-home-backend\\logs\\combined-2025-07-14.log",
+            "hash": "b812742e6abd2be4315bfa45d75f78f2b62c1828b0cedd994f72f877c25d09ba"
+        },
+        {
+            "date": 1752512400154,
+            "name": "D:\\3.Project\\smarthome\\smart-home-backend\\logs\\combined-2025-07-15.log",
+            "hash": "8c023615ae8e3250a536602aee9e991e479ebb14076bd390ba8d7619f1bbc613"
         }
     ],
     "hashType": "sha256"

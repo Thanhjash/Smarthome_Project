@@ -1,14 +1,17 @@
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { auth } from '@/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const withAuth = (WrappedComponent: React.ComponentType) => {
   const WithAuthComponent: React.FC = (props) => {
     const router = useRouter();
 
     useEffect(() => {
-      const unsubscribe = auth.onAuthStateChanged((user) => {
-        if (!user) {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const backendToken = localStorage.getItem('token');
+        
+        if (!user || !backendToken) {
           router.push('/login');
         }
       });

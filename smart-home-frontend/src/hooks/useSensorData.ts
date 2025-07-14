@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useReducer, useMemo } from 'react';
+import { useState, useEffect, useReducer, useMemo, useCallback } from 'react';
 import mqtt from 'mqtt';
 
 interface SensorData {
@@ -60,7 +60,7 @@ function reducer(state: State, action: Action): State {
     case 'UPDATE_SENSOR_DATA':
       return {
         ...state,
-        [action.payload.key]: [...state[action.payload.key], action.payload.data].slice(-50),
+        [action.payload.key]: [...state[action.payload.key as keyof State] as SensorData[], action.payload.data].slice(-50),
       };
     case 'UPDATE_DEVICE_STATUS':
       return {
@@ -107,7 +107,7 @@ function useMqttConnection(url: string, options: mqtt.IClientOptions) {
       console.log('Disconnecting from MQTT broker');
       mqttClient.end();
     };
-  }, [url, options]); // Thêm options vào mảng dependencies
+  }, [url, options]);
 
   return client;
 }
@@ -123,7 +123,7 @@ export const useSensorData = () => {
     reconnectPeriod: 1000,
     clientId: 'mqttjs_' + Math.random().toString(16).substr(2, 8),
     clean: true,
-  }), []); // Memoize options
+  }), []);
 
   const client = useMqttConnection(mqttBrokerUrl, mqttOptions);
 
@@ -165,5 +165,40 @@ export const useSensorData = () => {
     });
   }, [client]);
 
-  return state;
+  // 🔥 FIXED: Add refreshDeviceStatus function
+  const refreshDeviceStatus = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/devices/states', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        dispatch({ 
+          type: 'UPDATE_DEVICE_STATUS', 
+          payload: {
+            led: data.ledState,
+            buzzer: data.buzzerState,
+            motorA: data.ventilationSpeed,
+            motorB: data.fanSpeed,
+            autoMode: data.autoModeEnabled,
+            lightStatus: data.ledState,
+            fanSpeed: data.fanSpeed,
+            ventilationSpeed: data.ventilationSpeed,
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing device status:', error);
+    }
+  }, []);
+
+  // 🔥 FIXED: Return object with deviceStatus and refreshDeviceStatus
+  return {
+    ...state,
+    refreshDeviceStatus,
+  };
 };

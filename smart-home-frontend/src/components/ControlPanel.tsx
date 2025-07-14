@@ -24,25 +24,41 @@ export const ControlPanel: React.FC = () => {
     setAutoMode(deviceStatus.autoMode);
   }, [deviceStatus]);
 
+  // 🔥 FIXED: Updated endpoints and request structure
   const updateDeviceState = async (device: string, value: boolean | number) => {
     try {
-      const response = await fetch(`/api/device/${device}`, {
+      const token = localStorage.getItem('token');
+      
+      // Map device names to correct endpoints
+      const endpoint = device === 'light' ? 'light' 
+                    : device === 'fan' ? 'fan'
+                    : device === 'ventilation' ? 'ventilation'
+                    : device === 'autoMode' ? 'autoMode'
+                    : device;
+
+      const response = await fetch(`http://localhost:3001/api/devices/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ state: value }),
+        body: JSON.stringify({ 
+          state: value,
+          deviceId: 'default'
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update device state');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update device state');
       }
 
-      toast.success(`${device} updated successfully`);
+      const data = await response.json();
+      toast.success(data.message || `${device} updated successfully`);
       refreshDeviceStatus();
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error updating ${device}:`, error);
-      toast.error(`Failed to update ${device}`);
+      toast.error(error.message || `Failed to update ${device}`);
     }
   };
 
@@ -53,12 +69,16 @@ export const ControlPanel: React.FC = () => {
   };
 
   const handleFanSpeedChange = async (value: number) => {
-    await updateDeviceState('fan', value);
+    // Convert percentage to 0-255 range
+    const speed = Math.round((value / 100) * 255);
+    await updateDeviceState('fan', speed);
     setFanSpeed(value);
   };
 
   const handleVentilationSpeedChange = async (value: number) => {
-    await updateDeviceState('ventilation', value);
+    // Convert percentage to 0-255 range
+    const speed = Math.round((value / 100) * 255);
+    await updateDeviceState('ventilation', speed);
     setVentilationSpeed(value);
   };
 

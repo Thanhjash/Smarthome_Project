@@ -9,36 +9,54 @@ const DeviceControl: React.FC = () => {
 
   const handleLedToggle = async () => {
     const newState = !ledState;
-    await fetch('/api/device/led', {
+    const token = localStorage.getItem('token');
+    
+    await fetch('http://localhost:3001/api/devices/light', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ state: newState }),
+      body: JSON.stringify({ 
+        state: newState,
+        deviceId: 'default'
+      }),
     });
     setLedState(newState);
   };
 
   const handleMotorAChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const newState = Number(event.target.value);
-    await fetch('/api/device/motorA', {
+    const token = localStorage.getItem('token');
+    
+    await fetch('http://localhost:3001/api/devices/ventilation', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ state: newState }),
+      body: JSON.stringify({ 
+        state: newState,
+        deviceId: 'default'
+      }),
     });
     setMotorAState(newState);
   };
 
   const handleMotorBChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const newState = Number(event.target.value);
-    await fetch('/api/device/motorB', {
+    const token = localStorage.getItem('token');
+    
+    await fetch('http://localhost:3001/api/devices/fan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ state: newState }),
+      body: JSON.stringify({ 
+        state: newState,
+        deviceId: 'default'
+      }),
     });
     setMotorBState(newState);
   };
@@ -56,7 +74,7 @@ const DeviceControl: React.FC = () => {
       </div>
       <div>
         <label>Motor B Speed:</label>
-        <input type="range" min="0" max="100" value={motorBState} onChange={handleMotorBChange} />
+        <input type="range" min="0" max="255" value={motorBState} onChange={handleMotorBChange} />
       </div>
     </div>
   );

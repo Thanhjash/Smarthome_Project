@@ -34,14 +34,7 @@ async function connectDB() {
 
 async function createAdminUser(username, email, password) {
   try {
-    // Check if admin already exists
-    const existingAdmin = await User.findOne({ role: 'admin' });
-    if (existingAdmin) {
-      console.log('Admin user already exists:', existingAdmin.username);
-      return false;
-    }
-
-    // Check if user exists
+    // Check if user exists with same username or email
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     if (existingUser) {
       console.log('User already exists with this username or email');

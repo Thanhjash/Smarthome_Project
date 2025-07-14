@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>Camera Test</h2>
+    <button onclick="testRecognition()">Test Recognition</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testRecognition() {
+            const response = await fetch('/api/camera/recognize', {method: 'POST'});
+            const result = await response.json();
+            document.getElementById('result').innerHTML = JSON.stringify(result, null, 2);
+        }
+    </script>
+</body>
+</html>

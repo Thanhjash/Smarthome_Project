@@ -9,11 +9,18 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, isAdmin }) => {
   return (
-    <>
-    <Box ml="200px" p={4}>
+    <Box display="flex" minH="100vh">
       <Sidebar isAdmin={isAdmin} />
-      {children}
+      <Box 
+        ml="200px" 
+        p={4} 
+        flex="1" 
+        bg="gray.50" 
+        minH="100vh"
+        w="calc(100vw - 200px)"
+      >
+        {children}
+      </Box>
     </Box>
-    </>
   );
 };

@@ -2,10 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 import { Layout } from '@/components/Layout';
-import { Heading, Text, Card, CardBody, SimpleGrid, Box, Button, Table, Thead, Tbody, Tr, Th, Td, CardHeader, Spinner } from '@chakra-ui/react';
+import { Heading, Text, Card, CardBody, SimpleGrid, Box, Button, Table, Thead, Tbody, Tr, Th, Td, CardHeader, Spinner, useToast } from '@chakra-ui/react';
 
 interface User {
   username: string;
@@ -16,101 +14,131 @@ interface User {
 
 const AdminDashboard: React.FC = () => {
   const router = useRouter();
+  const toast = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.push('/login');
-      } else {
-        fetchUsers();
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-
-  const fetchUsers = async () => {
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch('/api/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    } finally {
-      setIsLoading(false);
+    // 🔥 FIXED: Check JWT token instead of Firebase
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    if (!token || !user) {
+      router.push('/login');
+      return;
     }
-  };
 
-  const handleSoftDelete = async (userId: string) => {
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/users/soft-delete`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ id: userId }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to soft delete user');
-      }
-      setUsers(users.filter(user => user._id !== userId));
-    } catch (error) {
-      console.error('Error soft deleting user:', error);
+    const userData = JSON.parse(user);
+    if (userData.role !== 'admin') {
+      router.push('/dashboard/user');
+      return;
     }
-  };
 
+    const fetchUsers = async () => {
+      try {
+        // 🔥 FIXED: Use backend endpoint with JWT token
+        const response = await fetch('http://localhost:3001/api/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch users',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [router, toast]);
+
+  // 🔥 REMOVED: Soft delete (not in backend API)
+  
   const handleDelete = async (userId: string) => {
     try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/users/deleteUser`, {
-        method: 'DELETE',
+      const token = localStorage.getItem('token');
+      // 🔥 FIXED: Use correct endpoint and method
+      const response = await fetch('http://localhost:3001/api/users/delete', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ id: userId }),
       });
+      
       if (!response.ok) {
         throw new Error('Failed to delete user');
       }
+      
       setUsers(users.filter(user => user._id !== userId));
+      toast({
+        title: 'Success',
+        description: 'User deleted successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
       console.error('Error deleting user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete user',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
   const handleApprove = async (userId: string) => {
     try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/users/approveUser`, {
-        method: 'PATCH',
+      const token = localStorage.getItem('token');
+      // 🔥 FIXED: Use correct endpoint and method
+      const response = await fetch('http://localhost:3001/api/users/approve', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ id: userId }),
       });
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error data:', errorData);
         throw new Error('Failed to approve user');
       }
-      const updatedUser = await response.json();
+      
       setUsers(users.map(user => (user._id === userId ? { ...user, status: 'approved' } : user)));
+      toast({
+        title: 'Success',
+        description: 'User approved successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
       console.error('Error approving user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to approve user',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -172,9 +200,6 @@ const AdminDashboard: React.FC = () => {
                           Approve
                         </Button>
                       )}
-                      <Button onClick={() => handleSoftDelete(user._id)} colorScheme='orange' mr={2}>
-                        Soft Delete
-                      </Button>
                       <Button onClick={() => handleDelete(user._id)} colorScheme="red">
                         Delete
                       </Button>

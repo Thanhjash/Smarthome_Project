@@ -33,6 +33,7 @@
     "luxon": "^3.4.4",
     "mongoose": "^8.5.1",
     "mqtt": "^5.13.0",
+    "multer": "^2.0.1",
     "node-cron": "^3.0.3",
     "querystring": "^0.2.1",
     "readline": "^1.3.0",

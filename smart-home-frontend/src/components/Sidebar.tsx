@@ -12,18 +12,18 @@ import { Box, Flex, VStack, Text, Button, Link as ChakraLink } from '@chakra-ui/
 import { MdDashboard } from "react-icons/md";
 
 const AdminLinks = [
-  { href: '/', icon: Home, label: 'Home' },
-  { href: '', icon: Users, label: 'User Management' },
-  { href: '', icon: BarChart2, label: 'Analytics' },
-  { href: '', icon: Settings, label: 'Settings' },
+  { href: '/dashboard/admin', icon: Home, label: 'Home' },
+  { href: '/admin/user-management', icon: Users, label: 'User Management' },
+  { href: '/dashboard/analytics', icon: BarChart2, label: 'Analytics' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ];
 
 const UserLinks = [
-  { href: '/', icon: Home, label: 'Home' },
+  { href: '/dashboard/user', icon: Home, label: 'Home' },
   { href: '/dashboard/sensor', icon: Thermometer, label: 'Sensor Dashboard' },
-  { href: '', icon: History, label: 'History' },
+  { href: '/dashboard/history', icon: History, label: 'History' },
+  { href: '/profile', icon: Settings, label: 'Profile' },
 ];
-
 
 export const Sidebar: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
   const pathname = usePathname();
@@ -34,6 +34,7 @@ export const Sidebar: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
     try {
       await logout();
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
       router.push('/login');
     } catch (error) {
       console.error('Failed to logout:', error);
@@ -42,19 +43,20 @@ export const Sidebar: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
 
   return (
     <Box
-    as="nav"
-    pos="fixed"
-    left="0"
-    top="0"
-    w="200px"
-    h="100vh"
-    bg="white"
-    color="black"
-    boxShadow="2xl"
-    p={4}
-    display="flex"
-    flexDirection="column"
-    justifyContent="space-between"
+      as="nav"
+      pos="fixed"
+      left="0"
+      top="0"
+      w="200px"
+      h="100vh"
+      bg="white"
+      color="black"
+      boxShadow="2xl"
+      p={4}
+      display="flex"
+      flexDirection="column"
+      justifyContent="space-between"
+      zIndex="1000"
     >
       <VStack spacing={5} align="stretch">
         <Flex align="center">
@@ -64,29 +66,29 @@ export const Sidebar: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
           </Text>
         </Flex>
         {links.map((link) => (
-        <NextLink key={link.href} href={link.href} passHref>
-          <Button
-            leftIcon={<link.icon />}
-            variant="ghost"
-            width="100%"
-            boxShadow="2xl"
-            isActive={pathname == link.href}
-          >
-            {link.label}
-          </Button>
-        </NextLink>
-      ))}
+          <NextLink key={link.href} href={link.href} passHref>
+            <Button
+              leftIcon={<link.icon />}
+              variant="ghost"
+              width="100%"
+              boxShadow="md"
+              bg={pathname === link.href ? "gray.100" : "transparent"}
+              _hover={{ bg: "gray.50" }}
+            >
+              {link.label}
+            </Button>
+          </NextLink>
+        ))}
       </VStack>
       <Button
         leftIcon={<FiLogOut />}
         colorScheme="red"
         variant="ghost"
-        boxShadow="2xl"
+        boxShadow="md"
         onClick={handleLogout}
       >
         Logout
       </Button>
-
     </Box>
   );
 };
