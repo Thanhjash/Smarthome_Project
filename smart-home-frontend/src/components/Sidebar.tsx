@@ -13,6 +13,7 @@ import { MdDashboard } from "react-icons/md";
 
 const AdminLinks = [
   { href: '/dashboard/admin', icon: Home, label: 'Home' },
+  { href: '/dashboard/sensor', icon: Thermometer, label: 'Sensor Dashboard' }, 
   { href: '/admin/user-management', icon: Users, label: 'User Management' },
   { href: '/dashboard/analytics', icon: BarChart2, label: 'Analytics' },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings' },

@@ -1,29 +1,90 @@
 import React from 'react';
-import { LightbulbIcon, Fan, Wind, AlertCircle, Settings } from 'lucide-react';
-import { useSensorData } from '@/hooks/useSensorData';
-import { Heading, Text, Card, CardBody, SimpleGrid, Box } from '@chakra-ui/react';
+import { LightbulbIcon, Fan, Wind, AlertCircle, Settings, Shield, User } from 'lucide-react';
+import { useSensorContext } from '@/contexts/SensorDataProvider';
+import { Heading, Text, Card, CardBody, SimpleGrid, Box, Badge, HStack } from '@chakra-ui/react';
 
 export const DeviceStatus: React.FC = () => {
-  const { deviceStatus } = useSensorData();
+  const { deviceStatus } = useSensorContext();
+
+  const {
+    led,
+    buzzer,
+    motorA,
+    motorB, 
+    autoMode,
+    emergencyMode = false,
+    manualLed = false,
+    manualMotorA = false,
+    manualMotorB = false,
+    manualBuzzer = false,
+  } = deviceStatus;
+
+  // Determine current mode
+  const getCurrentMode = () => {
+    if (emergencyMode) return { mode: 'Emergency', color: 'red', icon: Shield };
+    if (autoMode) return { mode: 'Auto', color: 'blue', icon: Settings };
+    return { mode: 'Manual', color: 'green', icon: User };
+  };
+
+  const currentMode = getCurrentMode();
 
   const statusItems = [
-    { name: 'Light', icon: LightbulbIcon, value: deviceStatus.led ? 'ON' : 'OFF' },
-    { name: 'Fan', icon: Fan, value: `${deviceStatus.motorB}` },
-    { name: 'Ventilation', icon: Wind, value: `${deviceStatus.motorA}` },
-    { name: 'Buzzer', icon: AlertCircle, value: deviceStatus.buzzer ? 'ON' : 'OFF' },
-    { name: 'Auto Mode', icon: Settings, value: deviceStatus.autoMode ? 'Enabled' : 'Disabled' },
+    { 
+      name: 'System Mode', 
+      icon: currentMode.icon, 
+      value: currentMode.mode,
+      badge: currentMode.color,
+      extra: emergencyMode ? 'Dangerous conditions detected' : 
+             autoMode ? 'Automatic control active' : 
+             'Manual control enabled'
+    },
+    { 
+      name: 'Light', 
+      icon: LightbulbIcon, 
+      value: led ? 'ON' : 'OFF',
+      badge: led ? 'green' : 'gray',
+      extra: manualLed ? 'Manual override' : null
+    },
+    { 
+      name: 'Fan', 
+      icon: Fan, 
+      value: `Speed: ${motorB}`,
+      badge: motorB > 0 ? 'blue' : 'gray',
+      extra: manualMotorB ? 'Manual override' : null
+    },
+    { 
+      name: 'Ventilation', 
+      icon: Wind, 
+      value: `Speed: ${motorA}`,
+      badge: motorA > 0 ? 'blue' : 'gray',
+      extra: manualMotorA ? 'Manual override' : null
+    },
+    { 
+      name: 'Buzzer', 
+      icon: AlertCircle, 
+      value: buzzer ? 'ON' : 'OFF',
+      badge: buzzer ? 'red' : 'gray',
+      extra: manualBuzzer ? 'Manual override' : emergencyMode ? 'Emergency control' : null
+    },
   ];
 
   return (
-    <SimpleGrid spacing={4} templateColumns='repeat(auto-fill, minmax(200px, 1fr))'>
+    <SimpleGrid spacing={4} templateColumns='repeat(auto-fill, minmax(250px, 1fr))'>
       {statusItems.map((item, index) => (
         <Card key={index} bg='white' color='black' boxShadow="2xl">
           <CardBody>
-            <Box display="flex" alignItems="center">
-              <Heading size="md" mr={2}>{item.name}</Heading>
-              <item.icon size='24px' />
-            </Box>
-            <Text mt={4} fontSize="xl">{item.value}</Text>
+            <HStack justify="space-between" mb={2}>
+              <Box display="flex" alignItems="center">
+                <item.icon size='20px' />
+                <Heading size="sm" ml={2}>{item.name}</Heading>
+              </Box>
+              <Badge colorScheme={item.badge}>{item.value}</Badge>
+            </HStack>
+            {item.extra && (
+              <Text fontSize="xs" color="gray.600" mt={1}>
+                {item.extra}
+              </Text>
+            )}
           </CardBody>
         </Card>
       ))}

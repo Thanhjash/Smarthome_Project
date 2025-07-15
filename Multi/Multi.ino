@@ -11,7 +11,7 @@
 #define RZERO 206.85
 #define RL_VALUE (1)
 #define RO_CLEAN_AIR_FACTOR (9.83)
-#define CALIBARAION_SAMPLE_TIMES (50)
+#define CALIBARAION_SAMPLE_TIMES (50) 
 #define CALIBRATION_SAMPLE_INTERVAL (500)
 #define READ_SAMPLE_INTERVAL (50)
 #define READ_SAMPLE_TIMES (5)
@@ -763,7 +763,7 @@ void setup() {
   mq135.setRegressionMethod(1); 
   mq2.init();
   mq2.setRegressionMethod(1);
-  
+  Serial.println("hello");
   // Initialize light sensor
   if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE)) {
     Serial.println("BH1750 sensor initialized");
@@ -888,7 +888,7 @@ void loop() {
 
 // Gas sensor helper functions
 float MQResistanceCalculation(int raw_adc) {
-  return ((float)RL_VALUE*(1023-raw_adc)/raw_adc);
+  return ((float)RL_VALUE*(4095-raw_adc)/raw_adc);
 }
  
 float MQCalibration(int mq_pin) {
@@ -926,4 +926,109 @@ int MQGetGasPercentage(float rs_ro_ratio, int gas_id) {
  
 int MQGetPercentage(float rs_ro_ratio, float *pcurve) {
   return (pow(10, (((log10(rs_ro_ratio)-pcurve[1])/pcurve[2]) + pcurve[0])));
+}
+/*
+  Since Co is READ_WRITE variable, onCoChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onCoChange()  {
+  // Add your code here to act upon Co change
+}
+/*
+  Since Co2 is READ_WRITE variable, onCo2Change() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onCo2Change()  {
+  // Add your code here to act upon Co2 change
+}
+/*
+  Since Humidity is READ_WRITE variable, onHumidityChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onHumidityChange()  {
+  // Add your code here to act upon Humidity change
+}
+/*
+  Since Lpg is READ_WRITE variable, onLpgChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onLpgChange()  {
+  // Add your code here to act upon Lpg change
+}
+/*
+  Since MotorASpeed is READ_WRITE variable, onMotorASpeedChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onMotorASpeedChange()  {
+  // Add your code here to act upon MotorASpeed change
+}
+/*
+  Since MotorBSpeed is READ_WRITE variable, onMotorBSpeedChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onMotorBSpeedChange()  {
+  // Add your code here to act upon MotorBSpeed change
+}
+/*
+  Since Nh3 is READ_WRITE variable, onNh3Change() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onNh3Change()  {
+  // Add your code here to act upon Nh3 change
+}
+/*
+  Since Smoke is READ_WRITE variable, onSmokeChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onSmokeChange()  {
+  // Add your code here to act upon Smoke change
+}
+/*
+  Since Light is READ_WRITE variable, onLightChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onLightChange()  {
+  // Add your code here to act upon Light change
+}
+/*
+  Since Flame is READ_WRITE variable, onFlameChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onFlameChange()  {
+  // Add your code here to act upon Flame change
+}
+/*
+  Since Buzzer is READ_WRITE variable, onBuzzerChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onBuzzerChange()  {
+  // Add your code here to act upon Buzzer change
+}
+/*
+  Since Led is READ_WRITE variable, onLedChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onLedChange()  {
+  // Add your code here to act upon Led change
+}
+/*
+  Since MotorAState is READ_WRITE variable, onMotorAStateChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onMotorAStateChange()  {
+  // Add your code here to act upon MotorAState change
+}
+/*
+  Since MotorBState is READ_WRITE variable, onMotorBStateChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onMotorBStateChange()  {
+  // Add your code here to act upon MotorBState change
+}
+/*
+  Since Temperature is READ_WRITE variable, onTemperatureChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onTemperatureChange()  {
+  // Add your code here to act upon Temperature change
 }

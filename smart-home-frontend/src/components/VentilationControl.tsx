@@ -1,27 +1,76 @@
-import React from 'react';
+// VentilationControl.tsx
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Slider } from '@/components/ui/Slider';
-import { useDeviceControl } from '@/hooks/useDeviceControl';
-import { useSensorData } from '@/hooks/useSensorData';
+import { useSensorContext } from '@/contexts/SensorDataProvider';
+import { toast } from 'react-hot-toast';
 
-export const LightControl: React.FC = () => {
-  const { deviceStatus } = useSensorData();
-  const [ventilationSpeed, setVentilationSpeed] = useDeviceControl(deviceStatus.ventilationSpeed, 'ventilation');
+export const VentilationControl: React.FC = () => {
+  const { deviceStatus, refreshDeviceStatus } = useSensorContext();
+  const [ventilationSpeed, setVentilationSpeed] = useState(deviceStatus.motorA || 0);
+
+  useEffect(() => {
+    setVentilationSpeed(deviceStatus.motorA || 0);
+  }, [deviceStatus.motorA]);
+
+  const updateDevice = async (value: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/devices/ventilation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ state: value, deviceId: 'default' }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+
+      const data = await response.json();
+      toast.success(data.message || 'Ventilation updated');
+      
+      // Refresh device status after successful update
+      setTimeout(() => refreshDeviceStatus(), 500);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update ventilation');
+    }
+  };
+
+  const handleChange = (value: number[]) => {
+    const speed = value[0];
+    setVentilationSpeed(speed);
+    updateDevice(speed);
+  };
+
+  const isDisabled = deviceStatus.emergencyMode || deviceStatus.autoMode;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ventilation Control</CardTitle>
+        <CardTitle>
+          Ventilation Control
+          {deviceStatus.manualMotorA && <span className="ml-2 text-sm text-orange-500">(Manual)</span>}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Slider
           min={0}
-          max={100}
+          max={255}
           step={1}
-          value={[Number(ventilationSpeed)]}
-          onValueChange={(value) => setVentilationSpeed(value[0])}
+          value={[ventilationSpeed]}
+          onValueChange={handleChange}
+          disabled={isDisabled}
         />
-        <div className="mt-2">Speed: {ventilationSpeed}%</div>
+        <div className="mt-2">Speed: {ventilationSpeed}</div>
+        {isDisabled && (
+          <div className="text-sm text-gray-500 mt-1">
+            {deviceStatus.emergencyMode ? 'Emergency mode active' : 'Auto mode enabled'}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
