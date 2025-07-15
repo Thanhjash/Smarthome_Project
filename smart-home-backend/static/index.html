@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Face Recognition</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { max-width: 900px; width: 100%; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .camera-view, .controls-section { padding: 20px; background: #f8f9fa; border-radius: 8px; }
+        video { width: 100%; border-radius: 8px; border: 2px solid #ddd; }
+        canvas { display: none; }
+        h3 { margin-top: 0; color: #495057; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #0056b3; }
+        button.recognize-btn { background: #28a745; }
+        button.recognize-btn:hover { background: #218838; }
+        .result { margin-top: 15px; padding: 12px; border-radius: 5px; display: none; text-align: center; }
+        .result.success { background: #d4edda; color: #155724; }
+        .result.error { background: #f8d7da; color: #721c24; }
+        .result.loading { background: #d1ecf1; color: #0c5460; }
+        #personsList { margin-top: 15px; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Webcam Face Recognition</h2>
+        <div class="main-layout">
+            <!-- Cột bên trái: Hiển thị Camera -->
+            <div class="camera-view">
+                <h3>📹 Live Webcam</h3>
+                <video id="webcam" autoplay muted playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <!-- Cột bên phải: Các nút điều khiển -->
+            <div class="controls-section">
+                <!-- Chức năng đăng ký -->
+                <div class="register-group">
+                    <h3>👤 Register New Person</h3>
+                    <input type="text" id="name" placeholder="Enter name here...">
+                    <button onclick="registerFromWebcam()">Capture & Register</button>
+                    <div id="registerResult" class="result"></div>
+                </div>
+
+                <hr style="margin: 30px 0; border: 1px solid #eee;">
+
+                <!-- Chức năng nhận diện -->
+                <div class="recognize-group">
+                    <h3>🔍 Recognize Face</h3>
+                    <button class="recognize-btn" onclick="recognizeFromWebcam()">Start Recognition</button>
+                    <div id="recognitionResult" class="result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const API_BASE = '/api/camera';
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+
+    // 1. Khởi động Webcam ngay khi tải trang
+    async function startWebcam() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        } catch (err) {
+            console.error("Error accessing webcam: ", err);
+            alert("Could not access webcam. Please allow camera permission and refresh the page.");
+        }
+    }
+
+    // Hàm chụp ảnh từ video và trả về dưới dạng Blob (file ảnh)
+    function captureFrame() {
+        // Thiết lập kích thước canvas bằng kích thước video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        // Vẽ khung hình hiện tại của video lên canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Trả về một Promise, sẽ resolve khi Blob được tạo
+        return new Promise(resolve => {
+            canvas.toBlob(blob => resolve(blob), 'image/jpeg');
+        });
+    }
+    
+    // 2. Đăng ký từ Webcam
+    async function registerFromWebcam() {
+        const name = document.getElementById('name').value.trim();
+        const resultEl = document.getElementById('registerResult');
+        
+        if (!name) {
+            showResult(resultEl, 'Please enter a name', 'error');
+            return;
+        }
+        
+        showResult(resultEl, 'Capturing and registering...', 'loading');
+        
+        const imageBlob = await captureFrame();
+        
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('image', imageBlob, `${name}.jpg`);
+        
+        try {
+            const response = await fetch(`${API_BASE}/register`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showResult(resultEl, `✅ Registered: ${data.person.name}`, 'success');
+                document.getElementById('name').value = '';
+            } else {
+                showResult(resultEl, `❌ ${data.message || data.error}`, 'error');
+            }
+        } catch (error) {
+            showResult(resultEl, `❌ Network Error: ${error.message}`, 'error');
+        }
+    }
+
+    // 3. Nhận diện từ Webcam
+    async function recognizeFromWebcam() {
+        const resultEl = document.getElementById('recognitionResult');
+        showResult(resultEl, 'Analyzing face...', 'loading');
+        
+        const imageBlob = await captureFrame();
+        
+        const formData = new FormData();
+        formData.append('image', imageBlob, 'recognition.jpg');
+        
+        try {
+            const response = await fetch(`${API_BASE}/recognize`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success && data.recognition.recognized) {
+                const name = data.recognition.name;
+                showResult(resultEl, `✅ Welcome, ${name}!`, 'success');
+
+                // *** DÒNG CODE MỚI ĐỂ HIỂN THỊ POP-UP ***
+                alert("You are allowed for ID Authentication");
+
+            } else {
+                showResult(resultEl, `❌ ${data.recognition?.message || 'No matching face found'}`, 'error');
+            }
+        } catch (error) {
+            showResult(resultEl, `❌ Network Error: ${error.message}`, 'error');
+        }
+    }
+
+
+    // Hàm trợ giúp hiển thị kết quả
+    function showResult(element, message, type) {
+        element.style.display = 'block';
+        element.innerHTML = message;
+        element.className = `result ${type}`;
+    }
+
+    // Tự động khởi động webcam khi trang được tải
+    startWebcam();
+</script>
+</body>
+</html>

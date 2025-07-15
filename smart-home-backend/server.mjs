@@ -1,4 +1,4 @@
-// server.mjs - Fixed version with proper initialization order
+// server.mjs - Updated with static files and camera routes
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { connectToDatabase } from './config/database.mjs';
 import routes from './routes/index.mjs';
+import cameraRoutes from './routes/cameraRoutes.mjs';
 import { cleanupDeletedUsers } from './controllers/userController.mjs';
 import { cleanupOldData } from './controllers/cleanupOldData.mjs';
 import cron from 'node-cron';
@@ -28,8 +29,12 @@ initializeJWTSecret();
 app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
 app.use(express.json());
 
-// Unified route handling
+// Serve static files
+app.use(express.static('static'));
+
+// API routes
 app.use('/api', routes);
+app.use('/api/camera', cameraRoutes);
 
 app.get('/', (req, res) => {
   res.send('Smart Home Bot API is running...');

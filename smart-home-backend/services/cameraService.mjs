@@ -4,51 +4,22 @@ import fs from 'fs';
 
 export class CameraService {
     constructor() {
-        this.cameraConfig = {
-            ip: "192.168.3.100",
-            username: "admin", 
-            password: "251005PAnh",
-            rtspUrl: "rtsp://admin:251005PAnh@192.168.3.100:554/onvif1"
-        };
-        this.isConnected = false;
         this.faceDbPath = './faces_db';
-        this.ensureFaceDbExists();
+        this.tempPath = './temp';
+        this.ensureDirectoriesExist();
     }
 
-    ensureFaceDbExists() {
+    ensureDirectoriesExist() {
         if (!fs.existsSync(this.faceDbPath)) {
             fs.mkdirSync(this.faceDbPath, { recursive: true });
         }
+        if (!fs.existsSync(this.tempPath)) {
+            fs.mkdirSync(this.tempPath, { recursive: true });
+        }
     }
 
-    async testConnection() {
-        return new Promise((resolve, reject) => {
-            const python = spawn('python', [
-                './scripts/test_camera.py', 
-                this.cameraConfig.rtspUrl
-            ]);
 
-            let output = '';
-            python.stdout.on('data', (data) => {
-                output += data.toString();
-            });
-
-            python.on('close', (code) => {
-                if (code === 0) {
-                    this.isConnected = true;
-                    resolve({ success: true, message: 'Camera connected successfully' });
-                } else {
-                    this.isConnected = false;
-                    reject({ success: false, message: 'Camera connection failed', output });
-                }
-            });
-
-            python.stderr.on('data', (data) => {
-                console.error('Camera test error:', data.toString());
-            });
-        });
-    }
-
+    // Thay thế hàm registerPerson cũ bằng hàm đã được sửa lỗi triệt để này
     async registerPerson(name, imageBuffer) {
         return new Promise((resolve, reject) => {
             const personDir = path.join(this.faceDbPath, name);
@@ -56,7 +27,7 @@ export class CameraService {
                 fs.mkdirSync(personDir, { recursive: true });
             }
 
-            const imagePath = path.join(personDir, 'face.jpg');
+            const imagePath = path.join(personDir, `${Date.now()}.jpg`);
             fs.writeFileSync(imagePath, imageBuffer);
 
             const python = spawn('python', [
@@ -65,66 +36,85 @@ export class CameraService {
                 imagePath
             ]);
 
-            python.on('close', (code) => {
-                if (code === 0) {
-                    resolve({ success: true, name, message: 'Person registered successfully' });
-                } else {
-                    reject({ success: false, message: 'Face registration failed' });
-                }
-            });
-        });
-    }
+            let stdoutData = '';
+            let stderrData = '';
 
-    async recognizeFace() {
-        return new Promise((resolve, reject) => {
-            const python = spawn('python', [
-                './scripts/recognize_face.py',
-                this.cameraConfig.rtspUrl,
-                this.faceDbPath
-            ]);
-
-            let result = '';
             python.stdout.on('data', (data) => {
-                result += data.toString();
+                stdoutData += data.toString();
             });
 
             python.stderr.on('data', (data) => {
-                console.error('Python stderr:', data.toString());
+                stderrData += data.toString();
             });
 
             python.on('close', (code) => {
-                console.log('Raw Python output:', result);
-                console.log('Trying to parse:', result.trim());
                 try {
-                    const parsed = JSON.parse(result.trim());
-                    resolve(parsed);
-                } catch (error) {
-                    console.error('Parse error:', error.message);
-                    reject({ success: false, message: 'Recognition parsing failed', rawOutput: result });
+                    const result = JSON.parse(stdoutData.trim());
+                    
+                    if (code === 0 && result.success) { // Nếu script chạy thành công VÀ trả về success: true
+                        if (stderrData) console.warn(`Python Warnings (register_face): ${stderrData}`);
+                        resolve(result); // Trả về kết quả thành công
+                    } else { // Nếu script chạy lỗi HOẶC trả về success: false
+                        // **LOGIC SỬA LỖI QUAN TRỌNG: Xóa file ảnh không hợp lệ**
+                        if (fs.existsSync(imagePath)) {
+                            fs.unlinkSync(imagePath);
+                        }
+                        console.error(`Python Error or logical failure (register_face): ${stderrData || result.message}`);
+                        reject(result); // Reject promise với thông báo lỗi chi tiết từ Python
+                    }
+                } catch (e) {
+                    // Nếu không parse được JSON -> Lỗi nghiêm trọng
+                    if (fs.existsSync(imagePath)) {
+                        fs.unlinkSync(imagePath);
+                    }
+                    console.error(`Failed to parse Python output: ${stdoutData}. Stderr: ${stderrData}`);
+                    reject({ success: false, message: "Internal script error." });
                 }
             });
-
-            // Add timeout
-            setTimeout(() => {
-                python.kill();
-                reject({ success: false, message: 'Recognition timeout after 60 seconds' });
-            }, 60000);
         });
     }
-
-    async startLiveStream() {
+    
+    
+    async recognizeFaceFromFile(imageBuffer) {
         return new Promise((resolve, reject) => {
+            const tempImagePath = path.join(this.tempPath, `rec_${Date.now()}.jpg`);
+            fs.writeFileSync(tempImagePath, imageBuffer);
+
             const python = spawn('python', [
-                './scripts/live_stream.py',
-                this.cameraConfig.rtspUrl
+                './scripts/recognize_face.py',
+                tempImagePath,
+                this.faceDbPath
             ]);
 
-            python.on('spawn', () => {
-                resolve({ success: true, message: 'Live stream started' });
+            let stdoutData = '';
+            let stderrData = '';
+
+            python.stdout.on('data', (data) => {
+                stdoutData += data.toString();
             });
 
-            python.on('error', (error) => {
-                reject({ success: false, message: 'Failed to start live stream', error: error.message });
+            python.stderr.on('data', (data) => {
+                stderrData += data.toString();
+            });
+
+            python.on('close', (code) => {
+                if (fs.existsSync(tempImagePath)) {
+                    fs.unlinkSync(tempImagePath);
+                }
+                
+                if (code === 0) { // Thành công
+                    if (stderrData) {
+                        console.warn(`Python Warnings (recognize_face): ${stderrData}`);
+                    }
+                    try {
+                        resolve(JSON.parse(stdoutData.trim()));
+                    } catch (error) {
+                        reject({ success: false, message: 'Failed to parse Python success result.' });
+                    }
+                } else { // Thất bại
+                    console.error(`Python Error (recognize_face): ${stderrData}`);
+                    reject({ success: false, message: `Recognition script failed with exit code ${code}.` });
+                }
             });
         });
     }

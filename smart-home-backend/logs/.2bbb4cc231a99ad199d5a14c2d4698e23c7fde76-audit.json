@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "D:\\3.Project\\smarthome\\smart-home-backend\\logs\\.2bbb4cc231a99ad199d5a14c2d4698e23c7fde76-audit.json",
+    "files": [
+        {
+            "date": 1752608922962,
+            "name": "D:\\3.Project\\smarthome\\smart-home-backend\\logs\\error-2025-07-16.log",
+            "hash": "5573942c58a4a230b1a7588caa4e8a75f7941c2eb171197541696837e8a1c32e"
+        }
+    ],
+    "hashType": "sha256"
+}

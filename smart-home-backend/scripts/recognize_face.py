@@ -1,73 +1,49 @@
-#!/usr/bin/env python3
-import sys
 import os
-import subprocess
-import json
-import logging
+import sys
 
-# Suppress ALL logging
+# === BẮT ĐẦU KHỐI LỆNH ẨN CẢNH BÁO ===
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-logging.getLogger('deepface').setLevel(logging.CRITICAL)
-logging.getLogger().setLevel(logging.CRITICAL)
 
 import warnings
-warnings.filterwarnings('ignore')
+import logging
 
+warnings.filterwarnings('ignore')
+logging.getLogger('tensorflow').setLevel(logging.FATAL)
+# === KẾT THÚC KHỐI LỆNH ẨN CẢNH BÁO ===
+
+import json
 from deepface import DeepFace
 
-def recognize_face(rtsp_url, db_path):
+def recognize_from_file(image_path, db_path):
     try:
-        env = os.environ.copy()
-        env["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
-        env['TF_CPP_MIN_LOG_LEVEL'] = '3'
+        if not os.path.exists(image_path):
+            return {"success": False, "recognized": False, "message": "Image file not found."}
+
+        if not os.path.exists(db_path) or not any(os.scandir(db_path)):
+            return {"success": True, "recognized": False, "message": "Face database is empty."}
         
-        code = f'''
-import cv2
-cap = cv2.VideoCapture("{rtsp_url}", cv2.CAP_FFMPEG)
-ret, frame = cap.read()
-if ret:
-    cv2.imwrite("temp_frame.jpg", frame)
-    print("SUCCESS")
-else:
-    print("FAILED")
-cap.release()
-'''
+        results = DeepFace.find(
+            img_path=image_path, 
+            db_path=db_path,
+            model_name='Facenet512',
+            detector_backend='ssd',
+            enforce_detection=False,
+            silent=True
+        )
         
-        result = subprocess.run([sys.executable, '-c', code], 
-                              env=env, capture_output=True, text=True, timeout=10)
-        
-        if "SUCCESS" not in result.stdout:
-            return {"success": False, "message": "Cannot capture frame"}
-        
-        if not os.path.exists(db_path) or not os.listdir(db_path):
-            if os.path.exists("temp_frame.jpg"):
-                os.remove("temp_frame.jpg")
-            return {"success": True, "recognized": False, "message": "No faces in database"}
-        
-        # Suppress stdout during DeepFace operation
-        old_stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
-        
-        results = DeepFace.find("temp_frame.jpg", db_path=db_path, enforce_detection=False)
-        
-        # Restore stdout
-        sys.stdout.close()
-        sys.stdout = old_stdout
-        
-        if os.path.exists("temp_frame.jpg"):
-            os.remove("temp_frame.jpg")
-        
-        if len(results[0]) > 0:
-            identity_path = results[0].iloc[0]['identity']
+        if results and not results[0].empty:
+            first_result = results[0].iloc[0]
+            identity_path = first_result['identity']
             person_name = os.path.basename(os.path.dirname(identity_path))
-            confidence = results[0].iloc[0]['distance']
-            return {"success": True, "recognized": True, "name": person_name, "confidence": float(confidence)}
+            return {"success": True, "recognized": True, "name": person_name}
         else:
             return {"success": True, "recognized": False, "message": "No matching face found"}
             
     except Exception as e:
-        return {"success": False, "message": f"Recognition failed: {str(e)}"}
+        return {"success": False, "recognized": False, "message": f"An error occurred during recognition: {str(e)}"}
 
 if __name__ == "__main__":
-    result = recognize_face(sys.argv[1], sys.argv[2])
+    result = recognize_from_file(sys.argv[1], sys.argv[2])
     print(json.dumps(result))
+    sys.exit(0) # Luôn thoát với code 0 cho nhận diện, vì "không tìm thấy" không phải là lỗi hệ thống
