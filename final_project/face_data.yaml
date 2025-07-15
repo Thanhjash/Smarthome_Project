@@ -1,0 +1,5 @@
+train: C:\Users\Admin\PycharmProjects\YOLOV7\IoT_project\split_face\train
+val: C:\Users\Admin\PycharmProjects\YOLOV7\IoT_project\split_face\validation
+test: C:\Users\Admin\PycharmProjects\YOLOV7\IoT_project\split_face\test
+nc: 5
+names: ['Hung', 'QA','Thanh','Triet','Viet_Dat']
